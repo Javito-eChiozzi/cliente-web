@@ -1,97 +1,63 @@
 
-from flask import Flask, render_template, request, redirect
-import sqlite3
+from flask import Flask, render_template, request, redirect, send_file
+import pandas as pd
 import os
-from werkzeug.utils import secure_filename
-import openpyxl
 
 app = Flask(__name__)
-app.config['UPLOAD_FOLDER'] = 'uploads'
-os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+data_file = "clientes.xlsx"
 
-DB_FILE = 'clientes.db'
+def cargar_datos():
+    if os.path.exists(data_file):
+        return pd.read_excel(data_file).to_dict(orient="records")
+    return []
 
-def init_db():
-    with sqlite3.connect(DB_FILE) as conn:
-        cursor = conn.cursor()
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS clientes (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                cliente TEXT,
-                estado TEXT,
-                rubro TEXT,
-                telefono TEXT,
-                mail TEXT,
-                comentario TEXT,
-                zona TEXT,
-                domicilio TEXT,
-                localidad TEXT,
-                provincia TEXT,
-                comercial TEXT,
-                contacto TEXT,
-                departamento_oficina TEXT,
-                ultimo_contacto TEXT
-            )
-        ''')
-        conn.commit()
+def guardar_datos(lista):
+    df = pd.DataFrame(lista)
+    df.to_excel(data_file, index=False)
 
-@app.route('/')
-def index():
-    return render_template('formulario.html')
+@app.route("/", methods=["GET", "POST"])
+def formulario():
+    if request.method == "POST":
+        nuevo = {
+            "Cliente": request.form.get("cliente", ""),
+            "Estado": request.form.get("estado", ""),
+            "Rubro": request.form.get("rubro", ""),
+            "Teléfono": request.form.get("telefono", ""),
+            "Mail": request.form.get("mail", ""),
+            "Comentario": request.form.get("comentario", ""),
+            "Zona": request.form.get("zona", ""),
+            "Domicilio": request.form.get("domicilio", ""),
+            "Localidad": request.form.get("localidad", ""),
+            "Provincia": request.form.get("provincia", ""),
+            "Comercial": request.form.get("comercial", ""),
+            "Contacto": request.form.get("contacto", ""),
+            "Departamento Oficina": request.form.get("departamento", ""),
+            "Último contacto": request.form.get("ultimo_contacto", ""),
+        }
+        datos = cargar_datos()
+        datos.append(nuevo)
+        guardar_datos(datos)
+        return redirect("/")
 
-@app.route('/guardar', methods=['POST'])
-def guardar():
-    datos = [request.form.get(campo) for campo in [
-        'cliente', 'estado', 'rubro', 'telefono', 'mail',
-        'comentario', 'zona', 'domicilio', 'localidad', 'provincia',
-        'comercial', 'contacto', 'departamento_oficina', 'ultimo_contacto'
-    ]]
-    with sqlite3.connect(DB_FILE) as conn:
-        cursor = conn.cursor()
-        cursor.execute('''
-            INSERT INTO clientes (
-                cliente, estado, rubro, telefono, mail, comentario,
-                zona, domicilio, localidad, provincia, comercial,
-                contacto, departamento_oficina, ultimo_contacto
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ''', datos)
-        conn.commit()
-    return redirect('/ver')
+    datos = cargar_datos()
+    return render_template("formulario.html", datos=datos)
 
-@app.route('/ver')
-def ver():
-    with sqlite3.connect(DB_FILE) as conn:
-        cursor = conn.cursor()
-        cursor.execute('SELECT * FROM clientes')
-        clientes = cursor.fetchall()
-    return render_template('ver_registros.html', clientes=clientes)
-
-@app.route('/importar', methods=['GET', 'POST'])
+@app.route("/importar", methods=["GET", "POST"])
 def importar():
-    if request.method == 'POST':
-        archivo = request.files['archivo']
-        if archivo and archivo.filename.endswith('.xlsx'):
-            filename = secure_filename(archivo.filename)
-            ruta = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-            archivo.save(ruta)
+    if request.method == "POST":
+        archivo = request.files.get("archivo")
+        if archivo and archivo.filename.endswith(".xlsx"):
+            df = pd.read_excel(archivo)
+            datos = cargar_datos()
+            nuevos = df.to_dict(orient="records")
+            datos.extend(nuevos)
+            guardar_datos(datos)
+            return redirect("/")
+    return render_template("importar_excel.html")
 
-            wb = openpyxl.load_workbook(ruta)
-            hoja = wb.active
-            with sqlite3.connect(DB_FILE) as conn:
-                cursor = conn.cursor()
-                for i, fila in enumerate(hoja.iter_rows(min_row=2, values_only=True)):
-                    if len(fila) >= 14:
-                        cursor.execute('''
-                            INSERT INTO clientes (
-                                cliente, estado, rubro, telefono, mail, comentario,
-                                zona, domicilio, localidad, provincia, comercial,
-                                contacto, departamento_oficina, ultimo_contacto
-                            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                        ''', fila[:14])
-                conn.commit()
-        return redirect('/ver')
-    return render_template('importar.html')
+@app.route("/descargar")
+def descargar():
+    return send_file(data_file, as_attachment=True)
 
-if __name__ == '__main__':
-    init_db()
-    app.run(host='0.0.0.0', port=10000)
+if __name__ == "__main__":
+    app.run(debug=True)
