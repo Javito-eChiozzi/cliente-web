@@ -1,0 +1,16 @@
+
+<!doctype html>
+<html>
+<head><title>Formulario de Cliente</title></head>
+<body>
+  <h1>Ingresar Cliente</h1>
+  <form action="/guardar" method="post">
+    {% for campo in ['cliente', 'estado', 'rubro', 'telefono', 'mail', 'comentario', 'zona', 'domicilio', 'localidad', 'provincia', 'comercial', 'contacto', 'departamento_oficina', 'ultimo_contacto'] %}
+    <label>{{ campo.replace('_', ' ').capitalize() }}:</label><br>
+    <input type="text" name="{{ campo }}"><br><br>
+    {% endfor %}
+    <input type="submit" value="Guardar">
+  </form>
+  <a href="/ver">Ver registros</a> | <a href="/importar">Importar desde Excel</a>
+</body>
+</html>
