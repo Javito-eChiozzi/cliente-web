@@ -1,37 +1,39 @@
+
 from flask import Flask, render_template, request, redirect
 import sqlite3
 import os
+from werkzeug.utils import secure_filename
+import openpyxl
 
 app = Flask(__name__)
+app.config['UPLOAD_FOLDER'] = 'uploads'
+os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
-DB_PATH = 'clientes.db'
+DB_FILE = 'clientes.db'
 
 def init_db():
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS clientes (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            cliente TEXT,
-            estado TEXT,
-            rubro TEXT,
-            telefono TEXT,
-            mail TEXT,
-            comentario TEXT,
-            zona TEXT,
-            domicilio TEXT,
-            localidad TEXT,
-            provincia TEXT,
-            comercial TEXT,
-            contacto TEXT,
-            departamento_oficina TEXT,
-            ultimo_contacto TEXT
-        )
-    ''')
-    conn.commit()
-    conn.close()
-
-init_db()
+    with sqlite3.connect(DB_FILE) as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS clientes (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                cliente TEXT,
+                estado TEXT,
+                rubro TEXT,
+                telefono TEXT,
+                mail TEXT,
+                comentario TEXT,
+                zona TEXT,
+                domicilio TEXT,
+                localidad TEXT,
+                provincia TEXT,
+                comercial TEXT,
+                contacto TEXT,
+                departamento_oficina TEXT,
+                ultimo_contacto TEXT
+            )
+        ''')
+        conn.commit()
 
 @app.route('/')
 def index():
@@ -39,95 +41,57 @@ def index():
 
 @app.route('/guardar', methods=['POST'])
 def guardar():
-    datos = (
-        request.form['cliente'],
-        request.form['estado'],
-        request.form['rubro'],
-        request.form['telefono'],
-        request.form['mail'],
-        request.form['comentario'],
-        request.form['zona'],
-        request.form['domicilio'],
-        request.form['localidad'],
-        request.form['provincia'],
-        request.form['comercial'],
-        request.form['contacto'],
-        request.form['departamento_oficina'],
-        request.form['ultimo_contacto']
-    )
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    cursor.execute('''
-        INSERT INTO clientes (
-            cliente, estado, rubro, telefono, mail, comentario,
-            zona, domicilio, localidad, provincia, comercial,
-            contacto, departamento_oficina, ultimo_contacto
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    ''', datos)
-    conn.commit()
-    conn.close()
+    datos = [request.form.get(campo) for campo in [
+        'cliente', 'estado', 'rubro', 'telefono', 'mail',
+        'comentario', 'zona', 'domicilio', 'localidad', 'provincia',
+        'comercial', 'contacto', 'departamento_oficina', 'ultimo_contacto'
+    ]]
+    with sqlite3.connect(DB_FILE) as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+            INSERT INTO clientes (
+                cliente, estado, rubro, telefono, mail, comentario,
+                zona, domicilio, localidad, provincia, comercial,
+                contacto, departamento_oficina, ultimo_contacto
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''', datos)
+        conn.commit()
     return redirect('/ver')
 
 @app.route('/ver')
 def ver():
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM clientes")
-    registros = cursor.fetchall()
-    columnas = [description[0] for description in cursor.description]
-    conn.close()
-    return render_template('ver_registros.html', registros=registros, columnas=columnas)
+    with sqlite3.connect(DB_FILE) as conn:
+        cursor = conn.cursor()
+        cursor.execute('SELECT * FROM clientes')
+        clientes = cursor.fetchall()
+    return render_template('ver_registros.html', clientes=clientes)
 
-@app.route('/editar/<int:id>', methods=['GET', 'POST'])
-def editar(id):
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
+@app.route('/importar', methods=['GET', 'POST'])
+def importar():
     if request.method == 'POST':
-        datos = (
-            request.form['cliente'],
-            request.form['estado'],
-            request.form['rubro'],
-            request.form['telefono'],
-            request.form['mail'],
-            request.form['comentario'],
-            request.form['zona'],
-            request.form['domicilio'],
-            request.form['localidad'],
-            request.form['provincia'],
-            request.form['comercial'],
-            request.form['contacto'],
-            request.form['departamento_oficina'],
-            request.form['ultimo_contacto'],
-            id
-        )
-        cursor.execute('''
-            UPDATE clientes SET
-                cliente=?, estado=?, rubro=?, telefono=?, mail=?, comentario=?,
-                zona=?, domicilio=?, localidad=?, provincia=?, comercial=?,
-                contacto=?, departamento_oficina=?, ultimo_contacto=?
-            WHERE id=?
-        ''', datos)
-        conn.commit()
-        conn.close()
+        archivo = request.files['archivo']
+        if archivo and archivo.filename.endswith('.xlsx'):
+            filename = secure_filename(archivo.filename)
+            ruta = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            archivo.save(ruta)
+
+            wb = openpyxl.load_workbook(ruta)
+            hoja = wb.active
+            with sqlite3.connect(DB_FILE) as conn:
+                cursor = conn.cursor()
+                for i, fila in enumerate(hoja.iter_rows(min_row=2, values_only=True)):
+                    if len(fila) >= 14:
+                        cursor.execute('''
+                            INSERT INTO clientes (
+                                cliente, estado, rubro, telefono, mail, comentario,
+                                zona, domicilio, localidad, provincia, comercial,
+                                contacto, departamento_oficina, ultimo_contacto
+                            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        ''', fila[:14])
+                conn.commit()
         return redirect('/ver')
-
-    cursor.execute("SELECT * FROM clientes WHERE id=?", (id,))
-    registro = cursor.fetchone()
-    conn.close()
-    columnas = ['cliente', 'estado', 'rubro', 'telefono', 'mail', 'comentario',
-                'zona', 'domicilio', 'localidad', 'provincia', 'comercial',
-                'contacto', 'departamento_oficina', 'ultimo_contacto']
-    return render_template('editar.html', registro=registro, columnas=columnas)
-
-@app.route('/eliminar/<int:id>', methods=['POST'])
-def eliminar(id):
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    cursor.execute("DELETE FROM clientes WHERE id=?", (id,))
-    conn.commit()
-    conn.close()
-    return redirect('/ver')
+    return render_template('importar.html')
 
 if __name__ == '__main__':
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host='0.0.0.0', port=port)
+    init_db()
+    app.run(host='0.0.0.0', port=10000)
