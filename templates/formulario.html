@@ -1,24 +1,138 @@
 
-<!doctype html>
+<!DOCTYPE html>
 <html>
-<head><title>Formulario de Cliente</title></head>
+<head>
+    <title>Formulario Clientes</title>
+    <style>
+        body { font-family: Arial; margin: 40px; }
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        label { font-weight: bold; }
+        input, select, textarea {
+            width: 95%;
+            padding: 5px;
+            margin-bottom: 10px;
+        }
+        .top-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            background: #f2f2f2;
+            padding: 10px;
+            border-bottom: 1px solid #ccc;
+            z-index: 10;
+        }
+        .top-bar a, .top-bar button {
+            background: #007BFF;
+            color: white;
+            padding: 8px 14px;
+            text-decoration: none;
+            border: none;
+            border-radius: 5px;
+            margin-right: 10px;
+            cursor: pointer;
+        }
+        .top-bar a:hover, .top-bar button:hover {
+            background: #0056b3;
+        }
+        .spacer { margin-top: 70px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #aaa; padding: 5px; }
+        th { background: #eee; }
+    </style>
+</head>
 <body>
-  <h1>Ingresar Cliente</h1>
-  <form action="/guardar" method="post">
-    {% for campo in ['cliente', 'estado', 'rubro', 'telefono', 'mail', 'comentario', 'zona', 'domicilio', 'localidad', 'provincia', 'comercial', 'contacto', 'departamento_oficina', 'ultimo_contacto'] %}
-    <label>{{ campo.replace('_', ' ').capitalize() }}:</label><br>
-    <input type="text" name="{{ campo }}"><br><br>
-    {% endfor %}
-    <input type="submit" value="Guardar">
-  </form>
-  <a href="/ver">Ver registros</a> | <a href="/importar">Importar desde Excel</a>
+    <div class="top-bar">
+        <button form="formulario">Guardar</button>
+        <a href="/importar">Importar Excel</a>
+        <a href="/descargar">Descargar Listado</a>
+    </div>
+
+    <div class="spacer"></div>
+
+    <h1>Ingreso de Cliente</h1>
+    <form method="POST" id="formulario">
+        <div class="form-grid">
+            <div>
+                <label>Cliente:</label>
+                <input type="text" name="cliente">
+                <label>Estado:</label>
+                <select name="estado">
+                    <option value=""></option>
+                    <option>Activo</option><option>En Contacto</option>
+                    <option>Cotizado</option><option>Inactivo</option>
+                </select>
+                <label>Rubro:</label>
+                <select name="rubro">
+                    <option value=""></option>
+                    <option>Aceite</option><option>Alimentos</option><option>Baterías</option>
+                    <option>Bebidas</option><option>Chacinados</option><option>Conservas</option>
+                    <option>Dulces y Mermeladas</option><option>Especias</option><option>Frutas</option>
+                    <option>Laboratorio</option><option>Limpieza</option><option>Lácteos</option>
+                    <option>Perfumería</option><option>Otro</option>
+                </select>
+                <label>Teléfono:</label>
+                <input type="text" name="telefono">
+                <label>Mail:</label>
+                <input type="text" name="mail">
+                <label>Comentario:</label>
+                <textarea name="comentario" rows="3"></textarea>
+                <label>Zona:</label>
+                <input type="text" name="zona">
+            </div>
+            <div>
+                <label>Domicilio:</label>
+                <input type="text" name="domicilio">
+                <label>Localidad:</label>
+                <input type="text" name="localidad">
+                <label>Provincia:</label>
+                <select name="provincia">
+                    <option value=""></option>
+                    <option>Buenos Aires</option><option>Catamarca</option><option>Chaco</option>
+                    <option>Chubut</option><option>Córdoba</option><option>Corrientes</option>
+                    <option>Entre Ríos</option><option>Formosa</option><option>Jujuy</option>
+                    <option>La Pampa</option><option>La Rioja</option><option>Mendoza</option>
+                    <option>Misiones</option><option>Neuquén</option><option>Río Negro</option>
+                    <option>Salta</option><option>San Juan</option><option>San Luis</option>
+                    <option>Santa Cruz</option><option>Santa Fe</option>
+                    <option>Santiago del Estero</option><option>Tierra del Fuego</option><option>Tucumán</option>
+                </select>
+                <label>Comercial:</label>
+                <select name="comercial">
+                    <option value=""></option>
+                    <option>Jorge Daniel</option><option>Carla</option>
+                    <option>Horacio</option><option>Andrés</option><option>Javier</option>
+                </select>
+                <label>Contacto:</label>
+                <input type="text" name="contacto">
+                <label>Departamento Oficina:</label>
+                <input type="text" name="departamento">
+                <label>Último contacto:</label>
+                <input type="text" name="ultimo_contacto">
+            </div>
+        </div>
+    </form>
+
+    {% if datos %}
+    <h2>Clientes cargados</h2>
+    <table>
+        <tr>
+            {% for key in datos[0].keys() %}
+                <th>{{ key }}</th>
+            {% endfor %}
+        </tr>
+        {% for cliente in datos %}
+            <tr>
+                {% for value in cliente.values() %}
+                    <td>{{ value }}</td>
+                {% endfor %}
+            </tr>
+        {% endfor %}
+    </table>
+    {% endif %}
 </body>
 </html>
-
-
-   <!-- BOTONES FLOTANTES -->
-<div style="position: fixed; top: 0; left: 0; width: 100%; background: white; padding: 10px; border-bottom: 1px solid #ccc; z-index: 100;">
-    <button form="formulario">Guardar</button>
-    <a href="/importar" style="margin-left: 10px;">Importar desde archivo Excel</a>
-</div>
-<div style="margin-top: 70px;"></div> <!-- Separador para que no tape el contenido -->
