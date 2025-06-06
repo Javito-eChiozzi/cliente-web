@@ -1,16 +1,38 @@
-
-<!doctype html>
+<!DOCTYPE html>
 <html>
-<head><title>Formulario de Cliente</title></head>
+<head>
+    <title>Formulario Clientes</title>
+</head>
 <body>
-  <h1>Ingresar Cliente</h1>
-  <form action="/guardar" method="post">
-    {% for campo in ['cliente', 'estado', 'rubro', 'telefono', 'mail', 'comentario', 'zona', 'domicilio', 'localidad', 'provincia', 'comercial', 'contacto', 'departamento_oficina', 'ultimo_contacto'] %}
-    <label>{{ campo.replace('_', ' ').capitalize() }}:</label><br>
-    <input type="text" name="{{ campo }}"><br><br>
-    {% endfor %}
-    <input type="submit" value="Guardar">
-  </form>
-  <a href="/ver">Ver registros</a> | <a href="/importar">Importar desde Excel</a>
+    <h1>Ingreso de Cliente</h1>
+
+    <!-- BOTONES ARRIBA -->
+    <div style="margin-bottom: 20px;">
+        <button form="formulario">Guardar</button>
+        <a href="/importar" style="margin-left: 10px;">Importar desde archivo Excel</a>
+    </div>
+
+    <form method="POST" id="formulario">
+        {% for campo in ["Cliente", "Estado", "Rubro", "Teléfono", "Mail", "Comentario", "Zona", "Domicilio", "Localidad", "Provincia", "Comercial", "Contacto", "Departamento Oficina", "Último contacto"] %}
+            <label>{{ campo }}:</label><br>
+            <input type="text" name="{{ campo|lower().replace(' ', '_') }}"><br><br>
+        {% endfor %}
+    </form>
+
+    <h2>Clientes cargados</h2>
+    <table border="1">
+        <tr>
+            {% for key in datos[0].keys() %}
+                <th>{{ key }}</th>
+            {% endfor %}
+        </tr>
+        {% for cliente in datos %}
+            <tr>
+                {% for value in cliente.values() %}
+                    <td>{{ value }}</td>
+                {% endfor %}
+            </tr>
+        {% endfor %}
+    </table>
 </body>
 </html>
