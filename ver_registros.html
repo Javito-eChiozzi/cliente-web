@@ -1,0 +1,35 @@
+
+<!doctype html>
+<html>
+<head><title>Lista de Clientes</title></head>
+<body>
+  <h1>Clientes Ingresados</h1>
+  <table border="1">
+    <tr>
+      <th>ID</th>
+      <th>Cliente</th>
+      <th>Estado</th>
+      <th>Rubro</th>
+      <th>Teléfono</th>
+      <th>Mail</th>
+      <th>Comentario</th>
+      <th>Zona</th>
+      <th>Domicilio</th>
+      <th>Localidad</th>
+      <th>Provincia</th>
+      <th>Comercial</th>
+      <th>Contacto</th>
+      <th>Departamento Oficina</th>
+      <th>Último Contacto</th>
+    </tr>
+    {% for c in clientes %}
+    <tr>
+      {% for campo in c %}
+      <td>{{ campo }}</td>
+      {% endfor %}
+    </tr>
+    {% endfor %}
+  </table>
+  <a href="/">Ingresar nuevo</a> | <a href="/importar">Importar Excel</a>
+</body>
+</html>
